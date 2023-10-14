@@ -7,7 +7,7 @@
 int main(void)
 {
 	const char *s = "aaa";
-	int fd = open("/tmp/xxx/qwe", O_CREAT|O_TRUNC);
+	int fd = openat(AT_FDCWD, "/var/spool/exim/input/qwe", O_CREAT|O_RDWR|O_EXCL, 0640);
 	if (fd < 0)
 		perror("open");
 	int wret = write(fd, s, 3);
@@ -15,5 +15,5 @@ int main(void)
 		perror("write");
 	int cret = close(fd);
 	if (cret < 0)
-		perror("cret");
+		perror("close");
 }

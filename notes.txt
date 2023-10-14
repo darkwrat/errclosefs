@@ -1,0 +1,3 @@
+setenforce 0 (or else EPERM on open())
+split_spool_directory - false
+./errclosefs -o allow_other -s -f -d /var/spool/exim/input
