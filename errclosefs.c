@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <float.h>
 #include <linux/limits.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,8 +28,8 @@ static int ino_unused = ERRC_MIN_INO;
 static struct errc_inode inodes[ERRC_MAX_INO];
 #define INODE(k) (&inodes[k])
 
-static uid_t exim_uid = 93;
-static gid_t exim_gid = 93;
+static uid_t exim_uid;
+static gid_t exim_gid;
 
 static void errc_init(void *userdata, struct fuse_conn_info *conn)
 {
@@ -57,6 +58,7 @@ static void errc_flush(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi
 		return;
 	}
 
+	/* This simulates a failure to persist -D file to some remote storage. */
 	struct errc_inode *inode = INODE(ino);
 	int err = 0, namelen = strlen(inode->name);
 	if (namelen > 2 && inode->name[namelen - 2] == '-' && inode->name[namelen - 1] == 'D')
@@ -221,6 +223,8 @@ static void errc_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, int 
 	struct timespec now;
 	clock_gettime(CLOCK_REALTIME, &now);
 
+	// fixme: this needs more love
+
 	if (to_set & FUSE_SET_ATTR_MODE)
 		inode->st.st_mode = attr->st_mode;
 	if (to_set & FUSE_SET_ATTR_UID)
@@ -256,7 +260,7 @@ static void errc_rename(fuse_req_t req, fuse_ino_t parent, const char *name, fus
 			const char *newname, unsigned int flags)
 {
 	if (flags != 0) {
-		fuse_reply_err(req, EINVAL); // fixme
+		fuse_reply_err(req, EINVAL); // fixme RENAME_EXCHANGE/RENAME_NOREPLACE
 		return;
 	}
 
@@ -296,13 +300,21 @@ static struct fuse_lowlevel_ops errc_ll_oper = {
     .rename = errc_rename,
 };
 
-// c&p from example/hello_ll.c
 int main(int argc, char *argv[])
 {
+	struct passwd *pwn = getpwnam("exim");
+	if (pwn == NULL) {
+		perror("getpwnam for exim user");
+		return 1;
+	}
+	exim_uid = pwn->pw_uid;
+	exim_gid = pwn->pw_gid;
+
+	// c&p from example/hello_ll.c follows
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 	struct fuse_session *se;
 	struct fuse_cmdline_opts opts;
-	struct fuse_loop_config config;
+	//	struct fuse_loop_config config;
 	int ret = -1;
 
 	if (fuse_parse_cmdline(&args, &opts) != 0)
@@ -340,13 +352,13 @@ int main(int argc, char *argv[])
 	fuse_daemonize(opts.foreground);
 
 	/* Block until ctrl+c or fusermount -u */
-	if (opts.singlethread)
-		ret = fuse_session_loop(se);
-	else {
-		config.clone_fd = opts.clone_fd;
-		config.max_idle_threads = opts.max_idle_threads;
-		ret = fuse_session_loop_mt(se, &config);
-	}
+	//	if (opts.singlethread)
+	ret = fuse_session_loop(se);
+	//	else {
+	//		config.clone_fd = opts.clone_fd;
+	//		config.max_idle_threads = opts.max_idle_threads;
+	//		ret = fuse_session_loop_mt(se, &config);
+	//	}
 
 	fuse_session_unmount(se);
 err_out3:
