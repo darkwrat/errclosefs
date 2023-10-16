@@ -59,7 +59,7 @@ static void errc_flush(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi
 
 	struct errc_inode *inode = INODE(ino);
 	int err = 0, namelen = strlen(inode->name);
-	if (namelen > 2 && inode->name[namelen-2] == '-' && inode->name[namelen-1] == 'D')
+	if (namelen > 2 && inode->name[namelen - 2] == '-' && inode->name[namelen - 1] == 'D')
 		err = EIO;
 
 	fuse_reply_err(req, err);
@@ -252,10 +252,11 @@ static void errc_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, int 
 	fuse_reply_attr(req, &inode->st, DBL_MAX);
 }
 
-static void errc_rename(fuse_req_t req, fuse_ino_t parent, const char *name, fuse_ino_t newparent, const char *newname,  unsigned int flags)
+static void errc_rename(fuse_req_t req, fuse_ino_t parent, const char *name, fuse_ino_t newparent,
+			const char *newname, unsigned int flags)
 {
 	if (flags != 0) {
-		fuse_reply_err(req, EINVAL); //fixme
+		fuse_reply_err(req, EINVAL); // fixme
 		return;
 	}
 
@@ -283,7 +284,6 @@ static void errc_rename(fuse_req_t req, fuse_ino_t parent, const char *name, fus
 
 static struct fuse_lowlevel_ops errc_ll_oper = {
     .init = errc_init,
-    //    .destroy = errc_destroy,
     .lookup = errc_lookup,
     .getattr = errc_getattr,
     .mknod = errc_mknod,
@@ -293,7 +293,7 @@ static struct fuse_lowlevel_ops errc_ll_oper = {
     .write = errc_write,
     .flush = errc_flush,
     .setattr = errc_setattr,
-	.rename = errc_rename,
+    .rename = errc_rename,
 };
 
 // c&p from example/hello_ll.c
